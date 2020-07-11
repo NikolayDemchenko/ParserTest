@@ -18,21 +18,23 @@ nightmare
 let base = [];
 const getData = (html) => {
   const $ = cheerio.load(html);
-  $("tr").each((i, e) => {
-    let org;
-    $(e)
-      .find("td")
-      .each((i, e) => {
-        org = { ...org, [nameSelect(i)]: $(e).text() };
-      });
-    base.push(org);
-  });
-  fs.writeFile("base.json", JSON.stringify(base), (err) => {
-    if (err) {
-      console.error(err);
-      return;
-    }
-  });
+  $("article")
+    .find("tr")
+    .each((i, e) => {
+      let org;
+      $(e)
+        .find("td")
+        .each((i, e) => {
+          org = { ...org, [nameSelect(i)]: $(e).text() };
+        });
+        org&&base.push(org);
+    });
+  // fs.writeFile("base.json", JSON.stringify(base), (err) => {
+  //   if (err) {
+  //     console.error(err);
+  //     return;
+  //   }
+  // });
   console.log("base :>> ", base);
 };
 
