@@ -3,58 +3,29 @@ const cheerio = require("cheerio");
 const fs = require("fs");
 const nightmare = Nightmare({ show: true });
 
-// var urls = require("./URLagrovesti.json");
-var urls = require("./urlsTest.json");
+var urls = require("./URLagrovesti.json");
+// var urls = require("./urlsTest.json");
 
-// console.log('urls', urls)
 
-// const url =
-//   "https://agrovesti.net/lib/regionals/region-22/perechen-krupnejshikh-selskokhozyajstvennykh-i-pererabatyvayushchikh-predpriyatij-altajskogo-kraya.html/";
-
-let allBase = [];
-urls.forEach((url) => {
-  // console.log('url', url)
-  nightmare
-  .goto(url)
-  .wait("body")
-  .evaluate(() => document.querySelector("body").innerHTML)
-  .end()
-  .then((resp) => {
-    getData(resp);
-  }).then(() => {
-    console.log("Ну охуеть теперь!");
-  })
-  .catch((err) => {
-    console.log(err);
-  });
+// Настройка выборки
+const getData = (html) => {
   let base = [];
-
-  const getData = (html) => {
-    const $ = cheerio.load(html);
-    $("article")
-      .find("tr")
-      .each((i, e) => {
-        let org;
-        $(e)
-          .find("td")
-          .each((i, e) => {
-            org = { ...org, [nameSelect(i)]: $(e).text() };
-          });
-        org && base.push(org);
-      });
-      console.log("base", base);
-  };
-  base && allBase.push(...base);
-});
-
-//  fs.writeFile("base.json", JSON.stringify(allBase), (err) => {
-//     if (err) {
-//       console.error(err);
-//       return;
-//     }
-//   });
-
-// console.log("allBase :>> ", allBase);
+  const $ = cheerio.load(html);
+  $("article")
+    .find("tr")
+    .each((i, e) => {
+      let org;
+      $(e)
+        .find("td")
+        .each((i, e) => {
+          org = { ...org, [nameSelect(i)]: $(e).text() };
+        });
+      org && base.push(org);
+    });
+  // console.log("base", base);
+  return base;
+};
+// Выборка наименований
 const nameSelect = (index) => {
   switch (index) {
     case 0:
@@ -67,3 +38,45 @@ const nameSelect = (index) => {
       return "Профиль деятельности";
   }
 };
+// Метод сохранения
+const fileSave=(base)=>{
+  fs.writeFile("base.json", JSON.stringify(base), (err) => {
+    if (err) {
+      console.error(err);
+      return;
+    }
+  });
+}
+// Парсинг
+const parse = (url) => {
+  return (
+    nightmare
+      .goto(url)
+      .wait("body")
+      .evaluate(() => document.querySelector("body").innerHTML)
+      // .end()
+      .then((resp) => getData(resp))
+      .catch((err) => {
+        console.log(err);
+      })
+  );
+};
+
+// Рекурсивный парсинг
+const parser = async (urls, i, arr) => {
+  arr.push(...(await parse(urls[i])));
+
+  if (urls.length > i + 1) {
+    return parser(urls, i + 1, arr);
+  }
+  return arr;
+};
+
+// Сохранение данных
+(async () => {
+  fileSave(await parser(urls, 0, []))
+  // console.log("parser :>> ", await parser(urls, 0, []));
+})();
+
+
+
